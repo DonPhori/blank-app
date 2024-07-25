@@ -3,38 +3,64 @@ import requests
 import webbrowser
 from urllib.parse import urlencode, urlparse, parse_qs
 
-# Define your OAuth credentials and endpoints
-CLIENT_ID = 'your-client-id'
-CLIENT_SECRET = 'your-client-secret'
-REDIRECT_URI = 'http://localhost:8501'
-AUTH_URL = 'https://your-tableau-server/oauth2/authorize'
-TOKEN_URL = 'https://your-tableau-server/oauth2/token'
+# Streamlit app
+st.title("Tableau Dashboard Integration")
+
+# Check if OAuth credentials are already set
+if 'client_id' not in st.session_state:
+    st.session_state['client_id'] = ''
+if 'client_secret' not in st.session_state:
+    st.session_state['client_secret'] = ''
+if 'redirect_uri' not in st.session_state:
+    st.session_state['redirect_uri'] = ''
+if 'auth_url' not in st.session_state:
+    st.session_state['auth_url'] = ''
+if 'token_url' not in st.session_state:
+    st.session_state['token_url'] = ''
+
+# Configuration form
+st.header("Configuration")
+with st.form("config_form"):
+    client_id = st.text_input('Client ID', st.session_state['client_id'])
+    client_secret = st.text_input('Client Secret', st.session_state['client_secret'], type='password')
+    redirect_uri = st.text_input('Redirect URI', st.session_state['redirect_uri'], value='http://localhost:8501')
+    auth_url = st.text_input('Authorization URL', st.session_state['auth_url'])
+    token_url = st.text_input('Token URL', st.session_state['token_url'])
+    submit_button = st.form_submit_button(label='Save Configuration')
+
+if submit_button:
+    st.session_state['client_id'] = client_id
+    st.session_state['client_secret'] = client_secret
+    st.session_state['redirect_uri'] = redirect_uri
+    st.session_state['auth_url'] = auth_url
+    st.session_state['token_url'] = token_url
+    st.success("Configuration saved successfully!")
 
 # Function to generate the OAuth authorization URL
 def get_auth_url():
     params = {
         'response_type': 'code',
-        'client_id': CLIENT_ID,
-        'redirect_uri': REDIRECT_URI,
+        'client_id': st.session_state['client_id'],
+        'redirect_uri': st.session_state['redirect_uri'],
         'scope': 'tableau:views:embed'  # Adjust scope as needed
     }
-    return f"{AUTH_URL}?{urlencode(params)}"
+    return f"{st.session_state['auth_url']}?{urlencode(params)}"
 
 # Function to retrieve OAuth token
 def get_oauth_token(auth_code):
     payload = {
         'grant_type': 'authorization_code',
         'code': auth_code,
-        'redirect_uri': REDIRECT_URI,
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET
+        'redirect_uri': st.session_state['redirect_uri'],
+        'client_id': st.session_state['client_id'],
+        'client_secret': st.session_state['client_secret']
     }
-    response = requests.post(TOKEN_URL, data=payload)
+    response = requests.post(st.session_state['token_url'], data=payload)
     response_data = response.json()
     return response_data.get('access_token')
 
-# Streamlit app
-st.title("Login to Tableau")
+# Authentication section
+st.header("Login to Tableau")
 
 # Check if the user is already authenticated
 if 'access_token' not in st.session_state:
@@ -90,3 +116,4 @@ else:
             """,
             height=800,
         )
+
